@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="../ui/design-system.css" />
+    <title>Header Login Manager</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <div class="brand">Header Login Manager</div>
+          <div class="subtitle">
+            Credentials stay in local Chrome extension storage.
+          </div>
+        </div>
+        <div id="header-actions" class="inline-actions">
+          <label class="enable-toggle" for="enabled-toggle">
+            <input id="enabled-toggle" type="checkbox" role="switch" />
+            <span>Enabled</span>
+          </label>
+          <button id="diagnose-rules" class="button secondary">
+            Check rules
+          </button>
+          <button id="export-backup" class="button secondary">Export</button>
+          <button id="import-backup" class="button secondary">Import</button>
+          <input
+            id="import-file"
+            type="file"
+            accept="application/json,.json"
+            hidden
+          />
+          <button id="new-site" class="button">Add site</button>
+        </div>
+      </header>
+      <div id="notice" aria-live="polite"></div>
+      <section id="app"></section>
+    </main>
+    <script type="module" src="./site.js"></script>
+  </body>
+</html>

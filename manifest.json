@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Header Login Manager",
+  "version": "1.0.0",
+  "description": "Manage site-specific request headers and user-triggered login profiles locally.",
+  "minimum_chrome_version": "120",
+  "action": {
+    "default_title": "Header Login Manager",
+    "default_popup": "src/popup/popup.html"
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "declarativeNetRequestWithHostAccess",
+    "declarativeNetRequestFeedback"
+  ],
+  "optional_host_permissions": ["https://*/*", "http://*/*"]
+}

@@ -1,0 +1,48 @@
+body {
+  min-width: 360px;
+}
+.popup-shell {
+  padding: var(--space-3);
+}
+.popup-shell .topbar {
+  margin-bottom: var(--space-3);
+}
+.popup-shell .brand {
+  font-size: 14px;
+}
+.site-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+.site-link {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.site-link:hover .site-card-title {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+.site-row-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+.site-row-actions input {
+  accent-color: var(--color-primary);
+}

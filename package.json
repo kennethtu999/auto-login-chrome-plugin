@@ -1,0 +1,12 @@
+{
+  "name": "header-login-manager-extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "validate": "node scripts/validate.mjs",
+    "package": "node scripts/package.mjs",
+    "check-version": "node scripts/check-version.mjs"
+  }
+}

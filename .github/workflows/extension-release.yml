@@ -1,0 +1,67 @@
+name: Publish Header Login Manager
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm test
+      - run: npm run validate
+      - run: npm run check-version -- "${GITHUB_REF_NAME}"
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: header-login-manager-${{ github.ref_name }}
+          path: dist/*.zip
+          if-no-files-found: error
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/*.zip --generate-notes
+      - name: Obtain Chrome Web Store access token
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          test -n "$CWS_CLIENT_ID" && test -n "$CWS_CLIENT_SECRET" && test -n "$CWS_REFRESH_TOKEN"
+          token_file="$(mktemp)"
+          curl --fail-with-body --silent --show-error https://oauth2.googleapis.com/token \
+            --data-urlencode "client_id=$CWS_CLIENT_ID" \
+            --data-urlencode "client_secret=$CWS_CLIENT_SECRET" \
+            --data-urlencode "refresh_token=$CWS_REFRESH_TOKEN" \
+            --data-urlencode "grant_type=refresh_token" > "$token_file"
+          access_token="$(node -e 'const fs=require("fs"); const token=JSON.parse(fs.readFileSync(process.argv[1], "utf8")).access_token; if (!token) process.exit(1); process.stdout.write(token)' "$token_file")"
+          rm -f "$token_file"
+          echo "::add-mask::$access_token"
+          echo "CWS_ACCESS_TOKEN=$access_token" >> "$GITHUB_ENV"
+      - name: Upload and publish to Chrome Web Store
+        env:
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          test -n "$CWS_PUBLISHER_ID" && test -n "$CWS_EXTENSION_ID"
+          zip_file="$(find dist -name '*.zip' -print -quit)"
+          resource="publishers/${CWS_PUBLISHER_ID}/items/${CWS_EXTENSION_ID}"
+          curl --fail-with-body --silent --show-error \
+            --request POST "https://chromewebstore.googleapis.com/upload/v2/${resource}:upload" \
+            --header "Authorization: Bearer $CWS_ACCESS_TOKEN" \
+            --header "Content-Type: application/zip" \
+            --header "X-Goog-Upload-Protocol: raw" \
+            --header "X-Goog-Upload-File-Name: $(basename "$zip_file")" \
+            --data-binary "@$zip_file"
+          curl --fail-with-body --silent --show-error \
+            --request POST "https://chromewebstore.googleapis.com/v2/${resource}:publish" \
+            --header "Authorization: Bearer $CWS_ACCESS_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{"publishType":"DEFAULT_PUBLISH"}'

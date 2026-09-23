@@ -194,9 +194,15 @@ function createLoginEditor(
   const block = element("section", { className: "editor-block login-editor" });
   const heading = element("div", { className: "section-heading" });
   heading.append(element("h3", { textContent: "Login profile" }));
+  const cloneProfile = button("Clone profile");
+  cloneProfile.addEventListener("click", () => {
+    const clone = readLoginBlock(block);
+    clone.name = clone.name ? `${clone.name} Copy` : "Copy";
+    block.after(createLoginEditor(clone));
+  });
   const removeProfile = button("Delete profile", "button danger small");
   removeProfile.addEventListener("click", () => block.remove());
-  heading.append(removeProfile);
+  heading.append(cloneProfile, removeProfile);
   block.append(heading);
   const name = field("Profile name", login.name);
   name.querySelector("input").dataset.loginName = "true";
@@ -223,7 +229,7 @@ function createLoginField(
   const row = element("div", { className: "field-row login-field-editor" });
   const label = field("Page label", loginField.label);
   label.querySelector("input").dataset.fieldLabel = "true";
-  const value = field("Value", loginField.value, "password");
+  const value = field("Value", loginField.value, "text");
   value.querySelector("input").dataset.fieldValue = "true";
   const remove = button("Delete", "button danger small");
   remove.addEventListener("click", () => row.remove());
@@ -240,8 +246,8 @@ function readHeaders(container) {
   }));
 }
 
-function readLogins(container) {
-  return [...container.querySelectorAll(".login-editor")].map((block) => ({
+function readLoginBlock(block) {
+  return {
     id: createId(),
     name: block.querySelector("[data-login-name]").value,
     submitButton: block.querySelector("[data-login-submit]").value,
@@ -250,7 +256,11 @@ function readLogins(container) {
       label: row.querySelector("[data-field-label]").value,
       value: row.querySelector("[data-field-value]").value,
     })),
-  }));
+  };
+}
+
+function readLogins(container) {
+  return [...container.querySelectorAll(".login-editor")].map(readLoginBlock);
 }
 
 function renderEditor(

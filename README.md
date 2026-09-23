@@ -12,7 +12,7 @@ npm run package
 
 Load this repository root with **chrome://extensions** → **Developer mode** → **Load unpacked**. Add a Site using an exact hostname (for example `admin.example.com`), grant its permission, create a login profile, then visit that exact host and press the profile button in the popup.
 
-Login matching is deliberately narrow: `label[for]`, wrapping `label`, then `aria-label`; submit matching is button text, submit value, then `aria-label`. Matching is trimmed, case-insensitive, and exact. A missing field, button, permission, or hostname match fails without filling the page.
+Login matching is deliberately narrow: `label[for]`, wrapping `label`, `aria-label`, then `placeholder`; submit matching is button text, submit value, then `aria-label`. Matching is trimmed, case-insensitive, and exact. A missing field, button, permission, or hostname match fails without filling the page.
 
 ## Backup and reset recovery
 

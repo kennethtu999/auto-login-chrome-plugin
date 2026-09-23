@@ -1,10 +1,25 @@
-import { loadStore, saveStore } from "../services/storage.js";
-import { isManagerEnabled } from "../services/manager-state.js";
-import { syncHeaderRules } from "../services/header-rules.js";
-import { hasSitePermission } from "../services/permissions.js";
+const popupStartedAt = performance.now();
+performance.mark("header-login-popup-start");
+
+function debugPopup(event, details = {}) {
+  const elapsedMs = Number((performance.now() - popupStartedAt).toFixed(1));
+  console.info("[Header Login Manager][popup]", event, {
+    elapsedMs,
+    ...details,
+  });
+}
+
+debugPopup("script-start", {
+  timeOrigin: new Date(performance.timeOrigin).toISOString(),
+});
 
 const grid = document.querySelector("#site-grid");
 const notice = document.querySelector("#notice");
+const manageSites = document.querySelector("#manage-sites");
+
+manageSites.addEventListener("click", () =>
+  chrome.tabs.create({ url: chrome.runtime.getURL("src/site/site.html") }),
+);
 
 function showNotice(message, type = "success") {
   notice.className = `notice ${type}`;
@@ -27,49 +42,80 @@ function renderSite(site) {
 
   const actions = document.createElement("div");
   actions.className = "site-row-actions";
-  const siteEnabled = document.createElement("input");
-  siteEnabled.type = "checkbox";
-  siteEnabled.checked = site.enabled !== false;
-  siteEnabled.setAttribute("aria-label", `Enable ${site.name}`);
-  siteEnabled.title = `Enable ${site.name}`;
-  siteEnabled.addEventListener("change", async () => {
-    siteEnabled.disabled = true;
-    try {
-      const store = await loadStore();
-      const savedSite = store.sites.find((candidate) => candidate.id === site.id);
-      if (!savedSite) throw new Error("This site no longer exists.");
-      savedSite.enabled = siteEnabled.checked;
-      await saveStore(store);
-      await syncHeaderRules(store.sites, hasSitePermission, await isManagerEnabled());
-      showNotice(`${savedSite.name} ${siteEnabled.checked ? "enabled" : "disabled"}.`);
-    } catch (error) {
-      siteEnabled.checked = !siteEnabled.checked;
-      showNotice(error.message, "error");
-    } finally {
-      siteEnabled.disabled = false;
-    }
-  });
+  const loginActions = document.createElement("div");
+  loginActions.className = "login-actions";
+  for (const login of site.logins ?? []) {
+    const loginButton = document.createElement("button");
+    loginButton.className = "button small";
+    loginButton.type = "button";
+    loginButton.textContent = login.name;
+    loginButton.title = `Log in as ${login.name}`;
+    loginButton.addEventListener("click", async () => {
+      loginButton.disabled = true;
+      const closeTimer = setTimeout(() => window.close(), 1000);
+      try {
+        const { runLoginOnActiveTab } = await import(
+          "../services/login-runner.js"
+        );
+        const result = await runLoginOnActiveTab(site, login);
+        showNotice(`${login.name}: filled ${result.filledFields} field(s).`);
+      } catch (error) {
+        clearTimeout(closeTimer);
+        showNotice(error.message, "error");
+      } finally {
+        loginButton.disabled = false;
+      }
+    });
+    loginActions.append(loginButton);
+  }
 
-  const manage = document.createElement("button");
-  manage.className = "button secondary small";
-  manage.type = "button";
-  manage.textContent = "Manage";
-  manage.addEventListener("click", () =>
-    chrome.tabs.create({
-      url: `${chrome.runtime.getURL("src/site/site.html")}?site=${encodeURIComponent(site.id)}`,
-    }),
-  );
-  actions.append(siteEnabled, manage);
+  actions.append(loginActions);
   row.append(siteLink, actions);
   return row;
 }
 
 async function start() {
-  const store = await loadStore();
+  debugPopup("storage-read-start");
+  const storageStartedAt = performance.now();
+  const result = await chrome.storage.local.get("headerLoginManager.profileStore");
+  const storageDurationMs = Number(
+    (performance.now() - storageStartedAt).toFixed(1),
+  );
+  const storedStore = result["headerLoginManager.profileStore"];
+  const store = {
+    sites: Array.isArray(storedStore?.sites) ? storedStore.sites : [],
+  };
+  const enabledSites = store.sites.filter((site) => site.enabled !== false);
+  debugPopup("storage-read-complete", {
+    durationMs: storageDurationMs,
+    siteCount: store.sites.length,
+    enabledSiteCount: enabledSites.length,
+  });
+
+  const renderStartedAt = performance.now();
   grid.replaceChildren();
-  if (store.sites.length === 0)
+  if (enabledSites.length === 0)
     grid.innerHTML =
-      '<div class="empty">Create a site profile from Manage.</div>';
-  else store.sites.forEach((site) => grid.append(renderSite(site)));
+      '<div class="empty">No enabled site profiles.</div>';
+  else enabledSites.forEach((site) => grid.append(renderSite(site)));
+
+  const renderDurationMs = Number(
+    (performance.now() - renderStartedAt).toFixed(1),
+  );
+  performance.mark("header-login-popup-ready");
+  performance.measure("header-login-popup-total", {
+    start: "header-login-popup-start",
+    end: "header-login-popup-ready",
+  });
+  debugPopup("render-complete", {
+    durationMs: renderDurationMs,
+    totalDurationMs: Number((performance.now() - popupStartedAt).toFixed(1)),
+  });
 }
-start().catch((error) => showNotice(error.message, "error"));
+
+start().catch((error) => {
+  debugPopup("startup-error", {
+    error: error instanceof Error ? error.message : String(error),
+  });
+  showNotice(error.message, "error");
+});

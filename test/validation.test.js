@@ -41,6 +41,32 @@ test("accepts a same-domain default URL and rejects an unrelated destination", (
   );
 });
 
+test("supports multiple Login Profiles", () => {
+  const site = validateSite({
+    ...validSite(),
+    logins: [
+      ...validSite().logins,
+      {
+        id: "l2",
+        name: "Tester",
+        submitButton: "Login",
+        fields: [{ id: "f2", label: "User ID", value: "tester" }],
+      },
+    ],
+  });
+  assert.equal(site.logins.length, 2);
+  assert.equal(site.logins[1].name, "Tester");
+});
+
+test("accepts local development hostnames", () => {
+  assert.equal(normalizeDomain("localhost"), "localhost");
+  assert.equal(normalizeDomain("127.0.0.1"), "127.0.0.1");
+  assert.equal(
+    normalizeDefaultUrl("http://localhost:3000/login", "localhost"),
+    "http://localhost:3000/login",
+  );
+});
+
 test("rejects non-exact, duplicate, and invalid Header Site Profile input", () => {
   assert.throws(
     () => normalizeDomain("https://admin.example.com/path"),

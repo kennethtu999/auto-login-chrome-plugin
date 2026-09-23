@@ -25,6 +25,7 @@ export function normalizeDomain(value) {
       "Domain must be an exact hostname without a scheme, port, path, or wildcard.",
     );
   }
+  if (domain === "localhost" || domain === "127.0.0.1") return domain;
   if (
     !/^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(
       domain,

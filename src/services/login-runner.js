@@ -1,4 +1,4 @@
-import { LOGIN_DELAY_MS } from "../shared/constants.js";
+import { LOGIN_DELAY_MS, LOGIN_TIMEOUT_MS } from "../shared/constants.js";
 import { hasSitePermission } from "./permissions.js";
 import { isManagerEnabled } from "./manager-state.js";
 
@@ -24,12 +24,22 @@ export async function runLoginOnActiveTab(site, login) {
     );
   if (!(await hasSitePermission(site.domain)))
     throw new Error(`Permission for ${site.domain} has not been granted.`);
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: executeLoginProfile,
-    args: [login, LOGIN_DELAY_MS],
-  });
-  const result = results[0]?.result;
+  let timeoutId;
+  const results = await Promise.race([
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      func: executeLoginProfile,
+      args: [login, LOGIN_DELAY_MS],
+    }),
+    new Promise((_, reject) => {
+      timeoutId = setTimeout(
+        () => reject(new Error("Login automation timed out.")),
+        LOGIN_TIMEOUT_MS,
+      );
+    }),
+  ]).finally(() => clearTimeout(timeoutId));
+  const result =
+    results.find((entry) => entry?.result?.ok)?.result ?? results[0]?.result;
   if (!result?.ok)
     throw new Error(
       result?.error ?? "Login automation did not return a result.",
@@ -59,8 +69,12 @@ export async function executeLoginProfile(login, delayMs) {
       const nested = label.querySelector("input, textarea, select");
       if (nested) return nested;
     }
-    return [...document.querySelectorAll("input, textarea, select")].find(
+    const ariaLabeled = [...document.querySelectorAll("input, textarea, select")].find(
       (input) => normalize(input.getAttribute("aria-label")) === expected,
+    );
+    if (ariaLabeled) return ariaLabeled;
+    return [...document.querySelectorAll("input, textarea, select")].find(
+      (input) => normalize(input.getAttribute("placeholder")) === expected,
     );
   };
   const setNativeValue = (input, value) => {

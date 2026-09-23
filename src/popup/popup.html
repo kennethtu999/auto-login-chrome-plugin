@@ -12,8 +12,14 @@
       <header class="topbar">
         <div>
           <div class="brand">Header Login Manager</div>
-          <div class="subtitle">Local site profiles</div>
         </div>
+        <button
+          id="manage-sites"
+          class="button secondary icon-button"
+          type="button"
+          aria-label="Manage sites"
+          title="Manage sites"
+        >⚙</button>
       </header>
       <div id="notice" aria-live="polite"></div>
       <section
@@ -22,6 +28,6 @@
         aria-label="Saved sites"
       ><div class="empty">Loading site profiles…</div></section>
     </main>
-    <script type="module" src="./popup.js"></script>
+    <script src="./popup.js"></script>
   </body>
 </html>

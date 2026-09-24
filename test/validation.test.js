@@ -58,6 +58,31 @@ test("supports multiple Login Profiles", () => {
   assert.equal(site.logins[1].name, "Tester");
 });
 
+test("accepts automatic login selectors and limits function choices to ten", () => {
+  const site = validateSite({
+    ...validSite(),
+    duplicateConfirmSelector: ".popup-visible button",
+    logins: [{
+      ...validSite().logins[0],
+      submitSelector: "#loginbtn button",
+      fields: [{ ...validSite().logins[0].fields[0], selector: "input[name=email]" }],
+    }],
+    functions: [{ id: "menu-1", name: "Menu", selectors: ["focus: a.menu-link | 管理設定", 'click: a[name="CCMAAPACK"]'] }],
+  });
+  assert.equal(site.logins[0].fields[0].selector, "input[name=email]");
+  assert.deepEqual(site.functions[0].selectors, ["focus: a.menu-link | 管理設定", 'click: a[name="CCMAAPACK"]']);
+  assert.throws(() => validateSite({
+    ...validSite(),
+    functions: [{ id: "bad", name: "Menu", selectors: ["focus:"] }],
+  }), /CSS selector/);
+  assert.throws(() => validateSite({
+    ...validSite(),
+    functions: Array.from({ length: 11 }, (_, index) => ({
+      id: `f-${index}`, name: `Function ${index}`, selectors: ["#menu"],
+    })),
+  }), /at most 10 functions/);
+});
+
 test("accepts local development hostnames", () => {
   assert.equal(normalizeDomain("localhost"), "localhost");
   assert.equal(normalizeDomain("127.0.0.1"), "127.0.0.1");

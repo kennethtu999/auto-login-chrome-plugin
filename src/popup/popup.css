@@ -2,10 +2,10 @@ body {
   min-width: 320px;
 }
 .popup-shell {
-  padding: var(--space-2);
+  padding: var(--space-3);
 }
 .popup-shell .topbar {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 .popup-shell .brand {
   font-size: 14px;
@@ -29,7 +29,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) 10px;
+  padding: 10px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
@@ -50,12 +50,12 @@ body {
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .login-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
   align-items: stretch;
 }
 .login-actions .button {
@@ -63,6 +63,43 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 4px 7px;
-  font-size: 10px;
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+.auto-account-heading {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.account-row input {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+.account-row .button { flex: 1; }
+.auto-controls {
+  display: grid;
+  gap: 5px;
+  min-width: 155px;
+  margin-top: 2px;
+}
+.auto-controls select {
+  width: 100%;
+  max-width: 180px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 12px;
 }

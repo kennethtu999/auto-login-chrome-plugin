@@ -8,6 +8,7 @@
     "default_title": "Header Login Manager",
     "default_popup": "src/popup/popup.html"
   },
+  "background": { "service_worker": "src/background.js", "type": "module" },
   "permissions": [
     "storage",
     "scripting",

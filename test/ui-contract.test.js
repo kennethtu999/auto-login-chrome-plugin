@@ -24,6 +24,8 @@ test("UI uses the shared design system and exposes login actions and values", ()
     "utf8",
   );
   assert.match(popupScript, /runLoginOnActiveTab\(site, login\)/);
+  assert.match(popupScript, /loginButton\.className = "button small"/);
+  assert.doesNotMatch(popupScript, /account = document\.createElement\("select"\)/);
   assert.match(popupScript, /querySelector\("#manage-sites"\)/);
   assert.doesNotMatch(popupScript, /textContent = "Manage"/);
   assert.match(popupScript, /const closeTimer = setTimeout\(\(\) => window\.close\(\), 1000\)/);

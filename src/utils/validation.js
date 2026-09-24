@@ -88,9 +88,25 @@ export function validateLogin(login) {
     const value = String(field.value ?? "");
     if (!label || !value)
       throw new ValidationError("Every login field needs a label and value.");
-    return { ...field, label, value };
+    return { ...field, label, value, ...(field.selector ? { selector: normalizeText(field.selector) } : {}) };
   });
-  return { ...login, name, submitButton, fields };
+  return { ...login, name, submitButton, ...(login.submitSelector ? { submitSelector: normalizeText(login.submitSelector) } : {}), fields };
+}
+
+function validateFunction(item) {
+  const name = normalizeText(item.name);
+  const selectors = Array.isArray(item.selectors)
+    ? item.selectors.map(normalizeText).filter(Boolean)
+    : [];
+  if (!name || selectors.length === 0 || selectors.length > 5)
+    throw new ValidationError("Each function needs a name and 1–5 selectors.");
+  for (const step of selectors) {
+    const explicit = /^(focus|click):\s*(.+)$/i.exec(step);
+    const selector = (explicit ? explicit[2] : step).split(/\s+\|\s+/, 2)[0].trim();
+    if (!selector || /^(focus|click):\s*$/i.test(step))
+      throw new ValidationError("Each function step needs a CSS selector.");
+  }
+  return { ...item, name, selectors };
 }
 
 export function validateSite(site, existingSites = []) {
@@ -107,6 +123,8 @@ export function validateSite(site, existingSites = []) {
   }
   const headers = (site.headers ?? []).map(validateHeader);
   const logins = (site.logins ?? []).map(validateLogin);
+  const functions = (site.functions ?? []).map(validateFunction);
+  if (functions.length > 10) throw new ValidationError("A site can have at most 10 functions.");
   return {
     ...site,
     ...(defaultUrl ? { defaultUrl } : {}),
@@ -114,6 +132,8 @@ export function validateSite(site, existingSites = []) {
     domain,
     headers,
     logins,
+    ...(site.functions ? { functions } : {}),
+    ...(site.duplicateConfirmSelector ? { duplicateConfirmSelector: normalizeText(site.duplicateConfirmSelector) } : {}),
   };
 }
 

@@ -122,7 +122,9 @@ diagnoseRulesButton.addEventListener("click", async () => {
 function renderHome() {
   activeSiteId = null;
   headerActions.classList.remove("editor-mode");
-  headerActions.querySelector(".editor-back")?.remove();
+  headerActions
+    .querySelectorAll(".editor-back, .editor-save, .editor-delete")
+    .forEach((item) => item.remove());
   app.replaceChildren();
   if (store.sites.length === 0) {
     app.append(
@@ -190,50 +192,81 @@ function createLoginEditor(
     submitButton: "",
     fields: [{ id: createId(), label: "", value: "" }],
   },
+  { open = false } = {},
 ) {
   const block = element("section", { className: "editor-block login-editor" });
-  const heading = element("div", { className: "section-heading" });
-  heading.append(element("h3", { textContent: "Login profile" }));
+  block.dataset.loginId = login.id;
+  const details = element("details", { className: "login-details" });
+  details.open = open;
+  const summary = element("summary", { className: "login-summary" });
+  const summaryName = element("span", { className: "login-summary-name" });
+  const summaryMeta = element("span", { className: "login-summary-meta" });
+  summary.append(summaryName, summaryMeta);
+  details.append(summary);
+  const content = element("div", { className: "login-editor-content" });
   const cloneProfile = button("Clone profile");
   cloneProfile.addEventListener("click", () => {
     const clone = readLoginBlock(block);
+    clone.id = createId();
+    clone.fields = clone.fields.map((item) => ({ ...item, id: createId() }));
     clone.name = clone.name ? `${clone.name} Copy` : "Copy";
-    block.after(createLoginEditor(clone));
+    block.after(createLoginEditor(clone, { open: true }));
   });
   const removeProfile = button("Delete profile", "button danger small");
   removeProfile.addEventListener("click", () => block.remove());
+  const heading = element("div", { className: "login-profile-actions" });
   heading.append(cloneProfile, removeProfile);
-  block.append(heading);
+  content.append(heading);
   const name = field("Profile name", login.name);
-  name.querySelector("input").dataset.loginName = "true";
+  const nameInput = name.querySelector("input");
+  nameInput.dataset.loginName = "true";
   const submit = field("Submit button text", login.submitButton);
   submit.querySelector("input").dataset.loginSubmit = "true";
-  const top = element("div", { className: "form-grid" });
-  top.append(name, submit);
-  block.append(top);
+  const submitSelector = field("Submit CSS selector (optional)", login.submitSelector ?? "");
+  submitSelector.querySelector("input").dataset.loginSubmitSelector = "true";
+  const top = element("div", { className: "form-grid login-profile-fields" });
+  top.append(name, submit, submitSelector);
+  content.append(top);
   const fieldList = element("div", { className: "login-field-list" });
   const addField = button("Add field");
-  addField.addEventListener("click", () =>
-    fieldList.append(createLoginField()),
-  );
+  const updateSummary = () => {
+    summaryName.textContent = nameInput.value.trim() || "Unnamed login";
+    const count = fieldList.querySelectorAll(".login-field-editor").length;
+    summaryMeta.textContent = `${count} ${count === 1 ? "field" : "fields"}`;
+  };
+  addField.addEventListener("click", () => {
+    fieldList.append(createLoginField(undefined, updateSummary));
+    updateSummary();
+  });
   const fieldHeading = element("div", { className: "section-heading" });
   fieldHeading.append(element("h3", { textContent: "Fields" }), addField);
-  block.append(fieldHeading, fieldList);
-  for (const item of login.fields) fieldList.append(createLoginField(item));
+  content.append(fieldHeading, fieldList);
+  for (const item of login.fields) fieldList.append(createLoginField(item, updateSummary));
+  nameInput.addEventListener("input", updateSummary);
+  updateSummary();
+  details.append(content);
+  block.append(details);
   return block;
 }
 
 function createLoginField(
   loginField = { id: createId(), label: "", value: "" },
+  onChange = () => {},
 ) {
   const row = element("div", { className: "field-row login-field-editor" });
+  row.dataset.fieldId = loginField.id;
   const label = field("Page label", loginField.label);
   label.querySelector("input").dataset.fieldLabel = "true";
   const value = field("Value", loginField.value, "text");
   value.querySelector("input").dataset.fieldValue = "true";
+  const selector = field("CSS selector (optional)", loginField.selector ?? "");
+  selector.querySelector("input").dataset.fieldSelector = "true";
   const remove = button("Delete", "button danger small");
-  remove.addEventListener("click", () => row.remove());
-  row.append(label, value, remove);
+  remove.addEventListener("click", () => {
+    row.remove();
+    onChange();
+  });
+  row.append(label, value, selector, remove);
   return row;
 }
 
@@ -248,15 +281,42 @@ function readHeaders(container) {
 
 function readLoginBlock(block) {
   return {
-    id: createId(),
+    id: block.dataset.loginId || createId(),
     name: block.querySelector("[data-login-name]").value,
     submitButton: block.querySelector("[data-login-submit]").value,
+    submitSelector: block.querySelector("[data-login-submit-selector]").value,
     fields: [...block.querySelectorAll(".login-field-editor")].map((row) => ({
-      id: createId(),
+      id: row.dataset.fieldId || createId(),
       label: row.querySelector("[data-field-label]").value,
       value: row.querySelector("[data-field-value]").value,
+      selector: row.querySelector("[data-field-selector]").value,
     })),
   };
+}
+
+function createFunctionEditor(item = { id: createId(), name: "", selectors: [] }) {
+  const row = element("div", { className: "field-row function-editor" });
+  row.dataset.functionId = item.id;
+  const name = field("Function name", item.name);
+  name.querySelector("input").dataset.functionName = "true";
+  const selectors = element("label", { className: "field" });
+  selectors.append(document.createTextNode("Actions in order (one per line)"));
+  const selectorInput = element("textarea", { value: item.selectors.join("\n"), rows: 3 });
+  selectorInput.placeholder = 'focus: a.menu-link | 管理設定\nclick: a[name="CCMAAPACK"]';
+  selectors.append(selectorInput);
+  selectorInput.dataset.functionSelectors = "true";
+  const remove = button("Delete", "button danger small");
+  remove.addEventListener("click", () => row.remove());
+  row.append(name, selectors, remove);
+  return row;
+}
+
+function readFunctions(container) {
+  return [...container.querySelectorAll(".function-editor")].map((row) => ({
+    id: row.dataset.functionId || createId(),
+    name: row.querySelector("[data-function-name]").value,
+    selectors: row.querySelector("[data-function-selectors]").value.split(/\n/).map((value) => value.trim()).filter(Boolean),
+  }));
 }
 
 function readLogins(container) {
@@ -271,6 +331,7 @@ function renderEditor(
     enabled: true,
     headers: [],
     logins: [],
+    functions: [],
   },
 ) {
   app.replaceChildren();
@@ -278,7 +339,9 @@ function renderEditor(
   const title = element("h2", { textContent: site.name || "New site" });
   const back = button("Back", "button editor-back");
   back.addEventListener("click", renderHome);
-  headerActions.querySelector(".editor-back")?.remove();
+  headerActions
+    .querySelectorAll(".editor-back, .editor-save, .editor-delete")
+    .forEach((item) => item.remove());
   headerActions.classList.add("editor-mode");
   headerActions.prepend(back);
   card.append(title);
@@ -324,15 +387,31 @@ function renderEditor(
   const loginsHeading = element("div", { className: "section-heading" });
   const logins = element("div");
   const addLogin = button("Add login");
-  addLogin.addEventListener("click", () => logins.append(createLoginEditor()));
+  addLogin.addEventListener("click", () => logins.append(createLoginEditor(undefined, { open: true })));
   loginsHeading.append(
     element("h3", { textContent: "Login accounts" }),
     addLogin,
   );
   card.append(loginsHeading, logins);
   site.logins.forEach((login) => logins.append(createLoginEditor(login)));
-  const actions = element("div", { className: "inline-actions" });
-  const save = button("Save site", "button");
+  const duplicate = field("Duplicate login confirmation CSS selector (optional)", site.duplicateConfirmSelector ?? "");
+  duplicate.querySelector("input").dataset.duplicateConfirm = "true";
+  card.append(duplicate);
+  const functionsHeading = element("div", { className: "section-heading" });
+  const functions = element("div");
+  const addFunction = button("Add function");
+  addFunction.addEventListener("click", () => {
+    if (functions.querySelectorAll(".function-editor").length >= 10) {
+      showNotice("A site can have at most 10 functions.", "error");
+      return;
+    }
+    functions.append(createFunctionEditor());
+  });
+  functionsHeading.append(element("h3", { textContent: "Functions after login (max 10)" }), addFunction);
+  card.append(functionsHeading, functions);
+  (site.functions ?? []).forEach((item) => functions.append(createFunctionEditor(item)));
+  const save = button("Save site", "button editor-save");
+  headerActions.insertBefore(save, back);
   save.addEventListener("click", async () => {
     try {
       const candidate = validateSite(
@@ -348,6 +427,8 @@ function renderEditor(
           enabled: enabledInput.checked,
           headers: readHeaders(headers),
           logins: readLogins(logins),
+          duplicateConfirmSelector: duplicate.querySelector("input").value,
+          functions: readFunctions(functions),
         },
         store.sites,
       );
@@ -371,9 +452,9 @@ function renderEditor(
       showNotice(error.message, "error");
     }
   });
-  actions.append(save);
   if (store.sites.some((item) => item.id === site.id)) {
-    const remove = button("Delete site", "button danger");
+    const remove = button("Delete site", "button danger editor-delete");
+    headerActions.insertBefore(remove, back);
     remove.addEventListener("click", async () => {
       if (!confirm(`Delete ${site.name}?`)) return;
       store.sites = store.sites.filter((item) => item.id !== site.id);
@@ -381,9 +462,7 @@ function renderEditor(
       showNotice("Site deleted.");
       renderHome();
     });
-    actions.append(remove);
   }
-  card.append(actions);
   if (site.logins.length) {
     const quickRun = element("div", { className: "inline-actions" });
     quickRun.append(

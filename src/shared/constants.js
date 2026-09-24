@@ -1,5 +1,6 @@
 export const STORAGE_KEY = "headerLoginManager.profileStore";
 export const ENABLED_KEY = "headerLoginManager.enabled";
+export const AUTO_LOGIN_KEY = "headerLoginManager.autoLogin";
 export const SCHEMA_VERSION = 1;
 export const LOGIN_DELAY_MS = 50;
 export const LOGIN_TIMEOUT_MS = 3000;
